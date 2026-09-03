@@ -63,7 +63,7 @@ def delete_task(task_id):
 
 @app.route("/api/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok"})
+    return jsonify({"status": "ok", "message": "Deployed via CI/CD!"})
 
 if __name__ == "__main__":
     init_db()
