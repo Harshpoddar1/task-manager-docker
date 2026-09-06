@@ -5,9 +5,9 @@ services:
       - "5000"
     environment:
       - DB_HOST=db
-      - DB_NAME=taskdb
-      - DB_USER=postgres
-      - DB_PASSWORD=password
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
@@ -15,13 +15,13 @@ services:
   db:
     image: postgres:15
     environment:
-      - POSTGRES_DB=taskdb
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
