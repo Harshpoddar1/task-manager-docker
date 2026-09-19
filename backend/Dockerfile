@@ -13,7 +13,7 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get upgrade -y
 WORKDIR /app
 
-RUN pip install --upgrade pip setuptools wheel
+RUN pip install --upgrade pip setuptools wheel "jaraco.context>=6.1.0"
 
 # Builder stage se sirf installed packages copy karo
 COPY --from=builder /root/.local /root/.local
