@@ -5,13 +5,15 @@ RUN apt-get update && apt-get upgrade -y
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt && \
-    pip install --upgrade pip setuptools wheel "jaraco.context>=6.1.0"
+RUN pip install --upgrade pip setuptools wheel "jaraco.context>=6.1.0" && \
+    pip install --user --no-cache-dir -r requirements.txt
 
 # ---- Stage 2: Final ----
 FROM python:3.11-slim
 RUN apt-get update && apt-get upgrade -y
 WORKDIR /app
+
+RUN pip install --upgrade pip setuptools wheel
 
 # Builder stage se sirf installed packages copy karo
 COPY --from=builder /root/.local /root/.local
