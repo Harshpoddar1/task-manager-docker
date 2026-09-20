@@ -13,7 +13,7 @@ jobs:
       - name: Code checkout to runner
         uses: actions/checkout@v4
       - name: pip-audit install and applied
-        run:  pip install pip-audit && pip-audit -r requirements.txt
+        run:  cd backend && pip install pip-audit && pip-audit -r requirements.txt
       - name: backend build check
         run:  docker compose build backend
       - name: Scan A - visibility
