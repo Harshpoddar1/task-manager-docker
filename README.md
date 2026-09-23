@@ -57,3 +57,4 @@ App will be available at `http://localhost/api/health`
 - `depends_on` in Docker Compose only controls container **start order** — it doesn't guarantee a service is actually ready to accept connections. Hit a real race condition where Flask tried connecting to Postgres before it had finished initializing. Fixed it by adding a proper `healthcheck` on the database service and using `condition: service_healthy`.
 - GitHub Actions runners connect from dynamic IPs, not a fixed one — so restricting SSH (port 22) to a single "My IP" in the security group blocks the CI/CD pipeline itself.
 - Personal Access Tokens need the `workflow` scope specifically to push changes to `.github/workflows/` files — the default `repo` scope isn't enough.
+# test
