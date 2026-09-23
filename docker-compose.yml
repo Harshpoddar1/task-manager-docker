@@ -33,5 +33,13 @@ services:
     depends_on:
       - backend
 
+  uptime_kuma:
+      image: louislam/uptime-kuma:1
+      ports:
+        - "1067:3001"
+      volumes:
+        - utk_data:/app/data
+
 volumes:
   db_data:
+  utk_data:
