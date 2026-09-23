@@ -58,3 +58,4 @@ App will be available at `http://localhost/api/health`
 - GitHub Actions runners connect from dynamic IPs, not a fixed one — so restricting SSH (port 22) to a single "My IP" in the security group blocks the CI/CD pipeline itself.
 - Personal Access Tokens need the `workflow` scope specifically to push changes to `.github/workflows/` files — the default `repo` scope isn't enough.
 # test
+# test2
