@@ -1,6 +1,6 @@
-# Task Manager — Dockerized Multi-Container App
+# Task Manager — Dockerized Multi-Container App with DevSecOps Pipeline
 
-A simple task management REST API built to practice Docker Compose, multi-stage builds, Nginx reverse proxy, cloud deployment, and CI/CD automation.
+A task management REST API built to practice Docker Compose, multi-stage builds, Nginx reverse proxy, cloud deployment, and a full DevSecOps pipeline (secrets management, vulnerability scanning, IaC, monitoring, and PR-based deployment).
 
 ## Tech Stack
 
@@ -8,21 +8,27 @@ A simple task management REST API built to practice Docker Compose, multi-stage 
 - **Database:** PostgreSQL
 - **Reverse Proxy:** Nginx
 - **Containerization:** Docker, Docker Compose (multi-stage builds)
-- **Deployment:** AWS EC2
+- **Infrastructure as Code:** Terraform (provisions EC2 + security group on AWS)
 - **CI/CD:** GitHub Actions
+- **Security Scanning:** Trivy (container images), pip-audit (Python dependencies)
+- **Monitoring:** Uptime Kuma
 
 ## Architecture
 
-
-Nginx acts as the single entry point and reverse-proxies all `/api/` requests to the Flask backend. The backend and database are not exposed directly — only Nginx is reachable from outside the Docker network.
+Nginx is the single entry point and reverse-proxies `/api/` requests to Flask. Backend and database are never exposed directly. Uptime Kuma runs as a sibling container polling the backend's health endpoint.
 
 ## Features
 
 - CRUD API for tasks (create, list, delete)
 - Multi-stage Dockerfile for a lean production image
-- Docker Compose orchestration with healthchecks (backend waits for Postgres to be *actually* ready, not just started)
-- Data persistence via named volumes
-- Automated deployment via GitHub Actions — every push to `main` automatically SSHes into the EC2 server, pulls the latest code, and rebuilds the containers
+- Docker Compose orchestration with healthchecks (backend waits for Postgres to be *actually* ready)
+- No hardcoded secrets — DB credentials injected via `.env` locally and GitHub Secrets in CI/CD
+- Automated deployment via GitHub Actions on every push to `main`
+- Container image scanning (Trivy) with a custom policy: fails the build only on fixable CRITICAL/HIGH vulnerabilities, warns on unfixable ones, ignores MEDIUM/LOW
+- Dependency vulnerability scanning (pip-audit) as a separate, faster pre-build gate
+- Infrastructure provisioned via Terraform instead of manual console clicks
+- Live uptime monitoring and downtime history via Uptime Kuma
+- Branch protection on `main` — all changes go through a pull request, no direct pushes
 
 ## API Endpoints
 
@@ -35,12 +41,17 @@ Nginx acts as the single entry point and reverse-proxies all `/api/` requests to
 
 ## CI/CD Pipeline
 
-On every push to `main`, a GitHub Actions workflow (`.github/workflows/deploy.yml`) automatically:
-1. Connects to the EC2 instance via SSH
-2. Pulls the latest code (`git pull`)
-3. Rebuilds and restarts the containers (`docker compose up --build -d`)
+On every push to `main`:
+1. Checkout code
+2. Run `pip-audit` against `requirements.txt`
+3. Build the backend Docker image
+4. Trivy scan (visibility pass — never blocks)
+5. Trivy scan (gate — fails only on fixable CRITICAL/HIGH)
+6. SSH into the EC2 server, pull latest code, regenerate `.env` from GitHub Secrets, rebuild and restart containers
 
-No manual deployment steps required after the initial server setup.
+## Infrastructure
+
+EC2 instance and security group are defined in `terraform/main.tf` and provisioned with `terraform apply` instead of manual AWS Console setup.
 
 ## Running Locally
 
@@ -50,12 +61,13 @@ cd task-manager-docker
 docker compose up --build
 ```
 
-App will be available at `http://localhost/api/health`
+App: `http://localhost/api/health` · Monitoring dashboard: `http://localhost:1067`
 
 ## What I Learned
 
-- `depends_on` in Docker Compose only controls container **start order** — it doesn't guarantee a service is actually ready to accept connections. Hit a real race condition where Flask tried connecting to Postgres before it had finished initializing. Fixed it by adding a proper `healthcheck` on the database service and using `condition: service_healthy`.
-- GitHub Actions runners connect from dynamic IPs, not a fixed one — so restricting SSH (port 22) to a single "My IP" in the security group blocks the CI/CD pipeline itself.
-- Personal Access Tokens need the `workflow` scope specifically to push changes to `.github/workflows/` files — the default `repo` scope isn't enough.
-# test
-# test2
+- `depends_on` only controls container **start order**, not readiness — fixed a real race condition between Flask and Postgres with a proper `healthcheck`.
+- A secret committed to git is compromised forever, even if removed later — prevention (`.gitignore` + secret managers) is the only real fix.
+- A Docker image carries far more than your own code — base OS packages and even a library's own bundled/vendored dependencies (like `setuptools`'s internal copy of `wheel`) can carry CVEs you never installed directly.
+- "Latest" versions aren't a permanent fix — chasing every new CVE is an infinite loop; real teams manage risk with severity thresholds and accepted-risk exceptions instead of demanding zero vulnerabilities.
+- GitHub Actions runners connect from dynamic IPs, not a fixed one — restricting SSH to "My IP" in the security group blocks the pipeline itself.
+- GitHub repo admins can bypass their own branch protection rules by default — has to be explicitly disabled to actually enforce PR-only merges.
